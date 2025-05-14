@@ -1,50 +1,56 @@
-<script>
-  const worker = new Worker('worker.js');
-
-  function adjustShortage() {
-    if (!latestInput || Object.keys(latestInput).length === 0) {
-      document.getElementById("adjustmentResult").innerText = "※ 先に「不足を計算する」を押してください。";
-      return;
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>釣銭準備アプリ</title>
+  <script src="main.js" defer></script>
+  <style>
+    /* Tailwind CSSを使用するためのスタイル */
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
     }
+    .flex {
+      display: flex;
+      align-items: center;
+    }
+    .space-x-2 {
+      gap: 8px;
+    }
+    .w-20 {
+      width: 5rem;
+    }
+    .font-medium {
+      font-weight: 500;
+    }
+    .p-1 {
+      padding: 8px;
+    }
+    .border {
+      border: 1px solid #ccc;
+    }
+    .rounded {
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="text-2xl font-bold mb-4">釣銭準備アプリ</h1>
 
-    document.getElementById("adjustmentResult").innerText = "調整中です…";
+  <!-- 入力フォーム -->
+  <div id="input-area" class="mb-4"></div>
 
-    worker.postMessage({
-      input: latestInput,
-      baseTargets,
-      maxTry: 15,
-    });
+  <button onclick="calculateShortage()" class="p-2 bg-blue-500 text-white rounded">不足を計算する</button>
+  <button onclick="adjustShortage()" class="p-2 bg-green-500 text-white rounded ml-2">調整する</button>
 
-    worker.onmessage = function (e) {
-      const best = e.data;
+  <h2 class="text-xl font-bold mt-4">不足金種</h2>
+  <pre id="shortageResult" class="bg-gray-100 p-2 rounded mt-2"></pre>
 
-      if (!best) {
-        document.getElementById("adjustmentResult").innerText = "※ 補填できませんでした。";
-        return;
-      }
+  <h2 class="text-xl font-bold mt-4">調整後金種</h2>
+  <pre id="adjustmentResult" class="bg-gray-100 p-2 rounded mt-2"></pre>
 
-      const { shortage, shortageTotal, combo } = best;
-
-      let resultText = `【調整後不足金種】\n`;
-      for (let denom of denominations) {
-        if (shortage[denom]) {
-          resultText += `${denom}円×${shortage[denom]}枚 = ${denom * shortage[denom]}円\n`;
-        }
-      }
-      resultText += `不足合計　${shortageTotal.toLocaleString()}円\n\n`;
-
-      resultText += `【補填内訳】\n`;
-      let 補填合計 = 0;
-      for (let denom of denominations) {
-        if (combo[denom]) {
-          const amount = denom * combo[denom];
-          補填合計 += amount;
-          resultText += `${denom}円×${combo[denom]}枚 = ${amount.toLocaleString()}円\n`;
-        }
-      }
-      resultText += `補填合計　${補填合計.toLocaleString()}円`;
-
-      document.getElementById("adjustmentResult").innerText = resultText;
-    };
-  }
-</script>
+  <!-- Worker.jsファイルを動作させるためのscript -->
+  <script src="worker.js" type="application/javascript" defer></script>
+</body>
+</html>
