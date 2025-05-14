@@ -1,112 +1,112 @@
-const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
-const baseTargets = {
-  10000: 0,
-  5000: 15,
-  1000: 42,
-  500: 50,
-  100: 100,
-  50: 50,
-  10: 100,
-  5: 16,
-  1: 20
-};
+const denominations = [10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
+const targetAmount = 155600;
 
-let latestInput = {};
-const inputArea = document.getElementById("input-area");
+document.addEventListener("DOMContentLoaded", () => {
+  const stockInputs = document.getElementById("stockInputs");
+  const result = document.getElementById("result");
+  const shortages = document.getElementById("shortages");
+  const compensations = document.getElementById("compensations");
+  const status = document.getElementById("status");
 
-denominations.forEach(denom => {
-  const wrapper = document.createElement("div");
-  wrapper.className = "flex items-center space-x-2";
-  wrapper.innerHTML = `
-    <label class="w-20 font-medium">${denom}円</label>
-    <input id="input${denom}" type="number" min="0" value="" class="flex-1 p-1 border rounded" />
-  `;
-  inputArea.appendChild(wrapper);
-});
+  const inputs = {};
 
-function calculateShortage() {
-  const input = {};
   denominations.forEach(denom => {
-    input[denom] = parseInt(document.getElementById(`input${denom}`).value || "0", 10);
+    const stockInput = document.createElement("input");
+    stockInput.type = "number";
+    stockInput.min = "0";
+    stockInput.value = "0";
+    stockInput.className = "w-full p-1 border rounded";
+    stockInputs.appendChild(stockInput);
+    inputs[denom] = stockInput;
+
+    const resultDisplay = document.createElement("div");
+    resultDisplay.textContent = `${denom}円: 0枚`;
+    resultDisplay.id = `result-${denom}`;
+    result.appendChild(resultDisplay);
   });
-  latestInput = input;
 
-  let resultText = `【調整前不足金種】\n`;
-  let total = 0;
-  for (let denom of denominations) {
-    const shortage = Math.max(0, baseTargets[denom] - input[denom]);
-    if (shortage > 0) {
-      resultText += `${denom}円×${shortage}枚 = ${denom * shortage}円\n`;
-      total += denom * shortage;
-    }
-  }
-  resultText += `不足合計　${total.toLocaleString()}円`;
+  document.getElementById("calculateBtn").addEventListener("click", () => {
+    status.textContent = "";
+    shortages.textContent = "";
+    compensations.textContent = "";
 
-  document.getElementById("shortageResult").innerText = resultText;
-  document.getElementById("adjustmentResult").innerText = "";
-}
-
-function adjustShortage() {
-  if (!latestInput || Object.keys(latestInput).length === 0) {
-    document.getElementById("adjustmentResult").innerText = "※ 先に「不足を計算する」を押してください。";
-    return;
-  }
-
-  document.getElementById("loading").classList.remove("hidden");
-
-  const workers = [];
-  const results = [];
-  let finishedCount = 0;
-  const maxTry = 12;
-  const numWorkers = 4;
-
-  for (let i = 0; i < numWorkers; i++) {
-    const worker = new Worker("worker.js");
-    workers.push(worker);
-    worker.postMessage({
-      input: latestInput,
-      baseTargets,
-      tryStart: i * maxTry / numWorkers,
-      tryEnd: (i + 1) * maxTry / numWorkers
+    const stock = {};
+    denominations.forEach(denom => {
+      stock[denom] = parseInt(inputs[denom].value) || 0;
     });
 
-    worker.onmessage = e => {
-      results.push(e.data);
-      finishedCount++;
-      if (finishedCount === numWorkers) {
-        const best = results.filter(Boolean).sort((a, b) => a.total - b.total)[0];
-        document.getElementById("loading").classList.add("hidden");
-        if (!best) {
-          document.getElementById("adjustmentResult").innerText = "※ 補填できませんでした。";
-        } else {
-          displayAdjustmentResult(best);
-        }
-      }
+    const result = getInitialUsage(stock);
+    updateResultDisplay(result);
+    const shortageInfo = getShortages(result, stock);
+    displayShortages(shortageInfo);
+  });
+
+  document.getElementById("adjustBtn").addEventListener("click", async () => {
+    status.textContent = "調整中です…";
+    shortages.textContent = "";
+    compensations.textContent = "";
+
+    const stock = {};
+    denominations.forEach(denom => {
+      stock[denom] = parseInt(inputs[denom].value) || 0;
+    });
+
+    const initialUsage = getInitialUsage(stock);
+    const shortageInfo = getShortages(initialUsage, stock);
+
+    const worker = new Worker("worker.js");
+    worker.postMessage({ stock, shortages: shortageInfo, targetAmount });
+
+    worker.onmessage = (e) => {
+      const { result, compensations: comp } = e.data;
+
+      updateResultDisplay(result);
+      displayShortages(getShortages(result, stock));
+      displayCompensations(comp);
+      status.textContent = "";
+      worker.terminate();
     };
+  });
+
+  function getInitialUsage(stock) {
+    let remaining = targetAmount;
+    const usage = {};
+
+    denominations.forEach(denom => {
+      const maxUse = Math.min(Math.floor(remaining / denom), stock[denom]);
+      usage[denom] = maxUse;
+      remaining -= denom * maxUse;
+    });
+
+    return usage;
   }
-}
 
-function displayAdjustmentResult(best) {
-  let resultText = `【調整後不足金種】\n`;
-  const { shortage, shortageTotal, combo } = best;
-
-  for (let denom of denominations) {
-    if (shortage[denom]) {
-      resultText += `${denom}円×${shortage[denom]}枚 = ${denom * shortage[denom]}円\n`;
-    }
+  function getShortages(usage, stock) {
+    const shortages = {};
+    denominations.forEach(denom => {
+      const diff = usage[denom] - stock[denom];
+      if (diff > 0) shortages[denom] = diff;
+    });
+    return shortages;
   }
-  resultText += `不足合計　${shortageTotal.toLocaleString()}円\n\n`;
 
-  resultText += `【補填内訳】\n`;
-  let 補填合計 = 0;
-  for (let denom of denominations) {
-    if (combo[denom]) {
-      const amount = denom * combo[denom];
-      補填合計 += amount;
-      resultText += `${denom}円×${combo[denom]}枚 = ${amount.toLocaleString()}円\n`;
-    }
+  function updateResultDisplay(usage) {
+    denominations.forEach(denom => {
+      document.getElementById(`result-${denom}`).textContent = `${denom}円: ${usage[denom] || 0}枚`;
+    });
   }
-  resultText += `補填合計　${補填合計.toLocaleString()}円`;
 
-  document.getElementById("adjustmentResult").innerText = resultText;
-}
+  function displayShortages(shortagesData) {
+    shortages.textContent = "";
+    Object.entries(shortagesData).forEach(([denom, count]) => {
+      shortages.textContent += `不足: ${denom}円 × ${count}枚\n`;
+    });
+  }
+
+  function displayCompensations(compData) {
+    compensations.textContent = "";
+    Object.entries(compData).forEach(([denom, count]) => {
+      compensations.textContent += `補填: ${denom}円 × ${count}枚\n`;
+    });
+  }
+});
