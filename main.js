@@ -1,5 +1,5 @@
 const denominations = [10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
-const targetCounts = [5, 4, 0, 10, 20, 100, 40, 50, 20, 50];
+const targetCounts = [0, 15, 42, 50, 100, 50, 100, 16, 20]
 const inputArea = document.getElementById('input-area');
 const targetArea = document.getElementById('target-area');
 const output = document.getElementById('output');
