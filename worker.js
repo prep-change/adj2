@@ -3,7 +3,7 @@ onmessage = function (e) {
 
   const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
 
-  function findOptimalAdjustment(input, baseTargets, maxTry = 10) {
+  function findOptimalAdjustment(input, baseTargets, maxTry = 15) {
     let best = null;
 
     for (let t = 0; t <= maxTry; t++) {
