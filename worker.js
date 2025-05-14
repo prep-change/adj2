@@ -1,57 +1,58 @@
 onmessage = function(e) {
-  const { stock, shortages, targetAmount } = e.data;
+  const { type, inputs, goalAmount } = e.data;
 
-  const denominations = [10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
-  const shortageDenoms = Object.keys(shortages).map(Number);
-
-  let best = null;
-
-  function* generate() {
-    const limits = shortageDenoms.map(d => shortages[d] + 1);
-    const counters = Array(shortageDenoms.length).fill(0);
-
-    while (true) {
-      yield [...counters];
-      let i = counters.length - 1;
-      while (i >= 0) {
-        counters[i]++;
-        if (counters[i] < limits[i]) break;
-        counters[i] = 0;
-        i--;
-      }
-      if (i < 0) break;
+  function calculate() {
+    let totalAmount = 0;
+    const result = [];
+    for (let i = 0; i < inputs.length; i++) {
+      totalAmount += inputs[i] * denominations[i];
     }
+    if (totalAmount === goalAmount) {
+      result.push("目標金額通りです！");
+      return result.join("\n");
+    }
+    result.push(`目標金額: ${goalAmount}`);
+    result.push(`現在の合計: ${totalAmount}`);
+    result.push("不足金額: " + (goalAmount - totalAmount));
+    return result.join("\n");
   }
 
-  for (const added of generate()) {
-    const tempStock = { ...stock };
-    shortageDenoms.forEach((d, i) => {
-      tempStock[d] += added[i];
+  function adjust() {
+    const result = [];
+    let totalAmount = 0;
+    let adjustmentNeeded = goalAmount;
+
+    const adjustment = inputs.map((count, index) => {
+      totalAmount += count * denominations[index];
+      return { denom: denominations[index], count };
     });
 
-    let remaining = targetAmount;
-    const usage = {};
-    denominations.forEach(denom => {
-      const maxUse = Math.min(Math.floor(remaining / denom), tempStock[denom]);
-      usage[denom] = maxUse;
-      remaining -= denom * maxUse;
-    });
-
-    if (remaining === 0) {
-      const usedOver = {};
-      let total = 0;
-      shortageDenoms.forEach(d => {
-        const extra = usage[d] - stock[d];
-        if (extra > 0) usedOver[d] = extra;
-      });
-      total = Object.values(usedOver).reduce((a, b) => a + b, 0);
-      if (!best || total < best.total) {
-        best = { result: usage, compensations: usedOver, total };
+    if (totalAmount === goalAmount) {
+      result.push("目標金額通りです！");
+    } else if (totalAmount < goalAmount) {
+      result.push("不足分を補填します:");
+      let remaining = goalAmount - totalAmount;
+      for (let i = 0; i < adjustment.length; i++) {
+        if (remaining <= 0) break;
+        const denom = adjustment[i].denom;
+        const maxCount = Math.floor(remaining / denom);
+        adjustment[i].count += maxCount;
+        remaining -= denom * maxCount;
       }
+      result.push("調整後: ");
+      adjustment.forEach(item => result.push(`${item.denom}円 × ${item.count}`));
+    } else {
+      result.push("過剰な金額を削減します");
     }
+    return result.join("\n");
   }
 
-  if (best) {
-    postMessage({ result: best.result, compensations: best.compensations });
+  let response;
+  if (type === "calculate") {
+    response = calculate();
+  } else if (type === "adjust") {
+    response = adjust();
   }
+
+  postMessage(response);
 };
