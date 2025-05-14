@@ -1,13 +1,25 @@
-// worker.js
-
-onmessage = function (e) {
+self.onmessage = function (e) {
   const { input, baseTargets, maxTry } = e.data;
-  const result = findOptimalAdjustment(input, baseTargets, maxTry);
-  postMessage(result);
+
+  const best = findOptimalAdjustment(input, baseTargets, maxTry);
+
+  self.postMessage(best);
+};
+
+const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
+const baseTargets = {
+  10000: 0,
+  5000: 15,
+  1000: 42,
+  500: 50,
+  100: 100,
+  50: 50,
+  10: 100,
+  5: 16,
+  1: 20
 };
 
 function findOptimalAdjustment(input, baseTargets, maxTry = 15) {
-  const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
   let best = null;
 
   for (let t = 0; t <= maxTry; t++) {
@@ -47,27 +59,6 @@ function findOptimalAdjustment(input, baseTargets, maxTry = 15) {
   return best;
 }
 
-function generateAdjustmentPatterns(baseTargets, extraCount) {
-  if (extraCount === 0) return [Object.assign({}, baseTargets)];
-  const patterns = [];
-  const denoms = Object.keys(baseTargets).map(Number);
-
-  function backtrack(i, remaining, current) {
-    if (i === denoms.length) {
-      if (remaining === 0) patterns.push({ ...current });
-      return;
-    }
-    const denom = denoms[i];
-    for (let add = 0; add <= remaining; add++) {
-      current[denom] = baseTargets[denom] + add;
-      backtrack(i + 1, remaining - add, current);
-    }
-  }
-
-  backtrack(0, extraCount, {});
-  return patterns;
-}
-
 function knapsack(usableCoins, targetAmount) {
   const dp = Array(targetAmount + 1).fill(null);
   dp[0] = {};
@@ -97,4 +88,25 @@ function knapsack(usableCoins, targetAmount) {
 
 function totalCoins(combo) {
   return Object.values(combo).reduce((sum, c) => sum + c, 0);
+}
+
+function generateAdjustmentPatterns(baseTargets, extraCount) {
+  if (extraCount === 0) return [Object.assign({}, baseTargets)];
+  const patterns = [];
+  const denoms = Object.keys(baseTargets).map(Number);
+
+  function backtrack(i, remaining, current) {
+    if (i === denoms.length) {
+      if (remaining === 0) patterns.push({ ...current });
+      return;
+    }
+    const denom = denoms[i];
+    for (let add = 0; add <= remaining; add++) {
+      current[denom] = baseTargets[denom] + add;
+      backtrack(i + 1, remaining - add, current);
+    }
+  }
+
+  backtrack(0, extraCount, {});
+  return patterns;
 }
