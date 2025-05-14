@@ -1,3 +1,6 @@
+// main.js
+
+// 定期的にUIを更新する要素
 const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
 const baseTargets = {
   10000: 0,
@@ -13,17 +16,19 @@ const baseTargets = {
 
 let latestInput = {};
 
+// UIの入力部分を動的に作成
 const inputArea = document.getElementById("input-area");
 denominations.forEach(denom => {
   const wrapper = document.createElement("div");
   wrapper.className = "flex items-center space-x-2";
   wrapper.innerHTML = `
     <label class="w-20 font-medium">${denom}円</label>
-    <input id="input${denom}" type="number" min="0" placeholder="" class="flex-1 p-1 border rounded" />
+    <input id="input${denom}" type="number" min="0" value="" class="flex-1 p-1 border rounded" />
   `;
   inputArea.appendChild(wrapper);
 });
 
+// 不足金額計算関数
 function calculateShortage() {
   const input = {};
   denominations.forEach(denom => {
@@ -46,29 +51,35 @@ function calculateShortage() {
   document.getElementById("adjustmentResult").innerText = "";
 }
 
+// Web Worker の設定
+const worker = new Worker('worker.js');
+
+// 調整ボタンの処理
 function adjustShortage() {
   if (!latestInput || Object.keys(latestInput).length === 0) {
     document.getElementById("adjustmentResult").innerText = "※ 先に「不足を計算する」を押してください。";
     return;
   }
 
-  const worker = new Worker("worker.js");
+  document.getElementById("adjustmentResult").innerText = "調整中です…";
+
   worker.postMessage({
     input: latestInput,
-    baseTargets: baseTargets,
-    maxTry: 10
+    baseTargets,
+    maxTry: 15,
   });
 
-  worker.onmessage = (e) => {
+  worker.onmessage = function (e) {
     const best = e.data;
+
     if (!best) {
       document.getElementById("adjustmentResult").innerText = "※ 補填できませんでした。";
       return;
     }
 
-    let resultText = `【調整後不足金種】\n`;
     const { shortage, shortageTotal, combo } = best;
 
+    let resultText = `【調整後不足金種】\n`;
     for (let denom of denominations) {
       if (shortage[denom]) {
         resultText += `${denom}円×${shortage[denom]}枚 = ${denom * shortage[denom]}円\n`;
@@ -88,6 +99,5 @@ function adjustShortage() {
     resultText += `補填合計　${補填合計.toLocaleString()}円`;
 
     document.getElementById("adjustmentResult").innerText = resultText;
-    worker.terminate();
   };
 }
