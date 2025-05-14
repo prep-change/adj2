@@ -1,6 +1,3 @@
-// main.js
-
-// 定期的にUIを更新する要素
 const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
 const baseTargets = {
   10000: 0,
@@ -16,7 +13,6 @@ const baseTargets = {
 
 let latestInput = {};
 
-// UIの入力部分を動的に作成
 const inputArea = document.getElementById("input-area");
 denominations.forEach(denom => {
   const wrapper = document.createElement("div");
@@ -28,7 +24,8 @@ denominations.forEach(denom => {
   inputArea.appendChild(wrapper);
 });
 
-// 不足金額計算関数
+const worker = new Worker("worker.js");
+
 function calculateShortage() {
   const input = {};
   denominations.forEach(denom => {
@@ -51,10 +48,6 @@ function calculateShortage() {
   document.getElementById("adjustmentResult").innerText = "";
 }
 
-// Web Worker の設定
-const worker = new Worker('worker.js');
-
-// 調整ボタンの処理
 function adjustShortage() {
   if (!latestInput || Object.keys(latestInput).length === 0) {
     document.getElementById("adjustmentResult").innerText = "※ 先に「不足を計算する」を押してください。";
@@ -66,7 +59,7 @@ function adjustShortage() {
   worker.postMessage({
     input: latestInput,
     baseTargets,
-    maxTry: 15,
+    maxTry: 15
   });
 
   worker.onmessage = function (e) {
