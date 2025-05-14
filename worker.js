@@ -1,48 +1,46 @@
-self.onmessage = function (e) {
-  const { input, baseTargets, maxTry } = e.data;
+onmessage = function (e) {
+  const { input, baseTargets, tryStart, tryEnd } = e.data;
   const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
 
-  function findOptimalAdjustment(input, baseTargets, maxTry = 10) {
-    let best = null;
+  let best = null;
 
-    for (let t = 0; t <= maxTry; t++) {
-      const patterns = generateAdjustmentPatterns(baseTargets, t);
-      for (let newTargets of patterns) {
-        const shortage = {};
-        let shortageTotal = 0, shortageCount = 0;
+  for (let t = tryStart; t < tryEnd; t++) {
+    const patterns = generatePatterns(baseTargets, Math.floor(t));
+    for (let newTargets of patterns) {
+      const shortage = {};
+      let shortageTotal = 0, shortageCount = 0;
 
-        for (let denom of denominations) {
-          const need = newTargets[denom] || 0;
-          const lack = Math.max(0, need - input[denom]);
-          if (lack > 0) {
-            shortage[denom] = lack;
-            shortageTotal += denom * lack;
-            shortageCount += lack;
-          }
-        }
-
-        const usableCoins = denominations.map(denom => {
-          const adjustedInput = input[denom] + (shortage[denom] || 0);
-          const usable = adjustedInput - (newTargets[denom] || 0);
-          return [denom, usable];
-        }).filter(([_, count]) => count > 0);
-
-        const combo = knapsack(usableCoins, shortageTotal);
-        if (!combo) continue;
-
-        const 補填和 = totalCoins(combo);
-        const total = shortageCount + 補填和;
-
-        if (!best || total < best.total) {
-          best = { newTargets, shortage, shortageCount, shortageTotal, combo, 補填和, total };
+      for (let denom of denominations) {
+        const need = newTargets[denom] || 0;
+        const lack = Math.max(0, need - input[denom]);
+        if (lack > 0) {
+          shortage[denom] = lack;
+          shortageTotal += denom * lack;
+          shortageCount += lack;
         }
       }
-    }
 
-    return best;
+      const usableCoins = denominations.map(denom => {
+        const adjustedInput = input[denom] + (shortage[denom] || 0);
+        const usable = adjustedInput - (newTargets[denom] || 0);
+        return [denom, usable];
+      }).filter(([_, count]) => count > 0);
+
+      const combo = knapsack(usableCoins, shortageTotal);
+      if (!combo) continue;
+
+      const totalCoins = Object.values(combo).reduce((a, b) => a + b, 0);
+      const total = shortageCount + totalCoins;
+
+      if (!best || total < best.total) {
+        best = { newTargets, shortage, shortageCount, shortageTotal, combo, total };
+      }
+    }
   }
 
-  function generateAdjustmentPatterns(baseTargets, extraCount) {
+  postMessage(best);
+
+  function generatePatterns(baseTargets, extraCount) {
     if (extraCount === 0) return [Object.assign({}, baseTargets)];
     const patterns = [];
     const denoms = Object.keys(baseTargets).map(Number);
@@ -53,7 +51,8 @@ self.onmessage = function (e) {
         return;
       }
       const denom = denoms[i];
-      for (let add = 0; add <= Math.min(remaining, 1); add++) {
+      const maxAdd = denom === 5000 ? Math.min(1, remaining) : remaining;
+      for (let add = 0; add <= maxAdd; add++) {
         current[denom] = baseTargets[denom] + add;
         backtrack(i + 1, remaining - add, current);
       }
@@ -78,7 +77,7 @@ self.onmessage = function (e) {
 
             if (
               dp[newAmount] === null ||
-              totalCoins(newCombo) < totalCoins(dp[newAmount])
+              Object.values(newCombo).reduce((s, c) => s + c, 0) < Object.values(dp[newAmount]).reduce((s, c) => s + c, 0)
             ) {
               dp[newAmount] = newCombo;
             }
@@ -89,11 +88,4 @@ self.onmessage = function (e) {
 
     return dp[targetAmount];
   }
-
-  function totalCoins(combo) {
-    return Object.values(combo).reduce((sum, c) => sum + c, 0);
-  }
-
-  const best = findOptimalAdjustment(input, baseTargets, maxTry);
-  self.postMessage(best);
 };
