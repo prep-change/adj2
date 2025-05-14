@@ -1,99 +1,176 @@
-self.onmessage = function (e) {
-  const { input, baseTargets, maxTry } = e.data;
-  const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
-
-  function findOptimalAdjustment(input, baseTargets, maxTry = 10) {
-    let best = null;
-
-    for (let t = 0; t <= maxTry; t++) {
-      const patterns = generateAdjustmentPatterns(baseTargets, t);
-      for (let newTargets of patterns) {
-        const shortage = {};
-        let shortageTotal = 0, shortageCount = 0;
-
-        for (let denom of denominations) {
-          const need = newTargets[denom] || 0;
-          const lack = Math.max(0, need - input[denom]);
-          if (lack > 0) {
-            shortage[denom] = lack;
-            shortageTotal += denom * lack;
-            shortageCount += lack;
-          }
-        }
-
-        const usableCoins = denominations.map(denom => {
-          const adjustedInput = input[denom] + (shortage[denom] || 0);
-          const usable = adjustedInput - (newTargets[denom] || 0);
-          return [denom, usable];
-        }).filter(([_, count]) => count > 0);
-
-        const combo = knapsack(usableCoins, shortageTotal);
-        if (!combo) continue;
-
-        const 補填和 = totalCoins(combo);
-        const total = shortageCount + 補填和;
-
-        if (!best || total < best.total) {
-          best = { newTargets, shortage, shortageCount, shortageTotal, combo, 補填和, total };
-        }
-      }
-    }
-
-    return best;
-  }
-
-  function generateAdjustmentPatterns(baseTargets, extraCount) {
-    if (extraCount === 0) return [Object.assign({}, baseTargets)];
-    const patterns = [];
-    const denoms = Object.keys(baseTargets).map(Number);
-
-    function backtrack(i, remaining, current) {
-      if (i === denoms.length) {
-        if (remaining === 0) patterns.push({ ...current });
-        return;
-      }
-      const denom = denoms[i];
-      for (let add = 0; add <= Math.min(remaining, 1); add++) {
-        current[denom] = baseTargets[denom] + add;
-        backtrack(i + 1, remaining - add, current);
-      }
-    }
-
-    backtrack(0, extraCount, {});
-    return patterns;
-  }
-
-  function knapsack(usableCoins, targetAmount) {
-    const dp = Array(targetAmount + 1).fill(null);
-    dp[0] = {};
-
-    for (let [denom, count] of usableCoins) {
-      for (let a = targetAmount; a >= 0; a--) {
-        if (dp[a] !== null) {
-          for (let k = 1; k <= count; k++) {
-            const newAmount = a + denom * k;
-            if (newAmount > targetAmount) break;
-            const newCombo = { ...dp[a] };
-            newCombo[denom] = (newCombo[denom] || 0) + k;
-
-            if (
-              dp[newAmount] === null ||
-              totalCoins(newCombo) < totalCoins(dp[newAmount])
-            ) {
-              dp[newAmount] = newCombo;
-            }
-          }
-        }
-      }
-    }
-
-    return dp[targetAmount];
-  }
-
-  function totalCoins(combo) {
-    return Object.values(combo).reduce((sum, c) => sum + c, 0);
-  }
-
-  const best = findOptimalAdjustment(input, baseTargets, maxTry);
-  self.postMessage(best);
+const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
+const baseTargets = {
+  10000: 0,
+  5000: 15,
+  1000: 42,
+  500: 50,
+  100: 100,
+  50: 50,
+  10: 100,
+  5: 16,
+  1: 20
 };
+
+let latestInput = {};
+
+const inputArea = document.getElementById("input-area");
+denominations.forEach(denom => {
+  const wrapper = document.createElement("div");
+  wrapper.className = "flex items-center space-x-2";
+  wrapper.innerHTML = `
+    <label class="w-20 font-medium">${denom}円</label>
+    <input id="input${denom}" type="number" min="0" value="" class="flex-1 p-1 border rounded" />
+  `;
+  inputArea.appendChild(wrapper);
+});
+
+function calculateShortage() {
+  const input = {};
+  denominations.forEach(denom => {
+    input[denom] = parseInt(document.getElementById(`input${denom}`).value || "0", 10);
+  });
+  latestInput = input;
+
+  let resultText = `【調整前不足金種】\n`;
+  let total = 0;
+  for (let denom of denominations) {
+    const shortage = Math.max(0, baseTargets[denom] - input[denom]);
+    if (shortage > 0) {
+      resultText += `${denom}円×${shortage}枚 = ${denom * shortage}円\n`;
+      total += denom * shortage;
+    }
+  }
+  resultText += `不足合計　${total.toLocaleString()}円`;
+
+  document.getElementById("shortageResult").innerText = resultText;
+  document.getElementById("adjustmentResult").innerText = "";
+}
+
+function adjustShortage() {
+  if (!latestInput || Object.keys(latestInput).length === 0) {
+    document.getElementById("adjustmentResult").innerText = "※ 先に「不足を計算する」を押してください。";
+    return;
+  }
+
+  const input = latestInput;
+  const best = findOptimalAdjustment(input, baseTargets, 10);
+  if (!best) {
+    document.getElementById("adjustmentResult").innerText = "※ 補填できませんでした。";
+    return;
+  }
+
+  let resultText = `【調整後不足金種】\n`;
+  const { shortage, shortageTotal, combo } = best;
+
+  for (let denom of denominations) {
+    if (shortage[denom]) {
+      resultText += `${denom}円×${shortage[denom]}枚 = ${denom * shortage[denom]}円\n`;
+    }
+  }
+  resultText += `不足合計　${shortageTotal.toLocaleString()}円\n\n`;
+
+  resultText += `【補填内訳】\n`;
+  let 補填合計 = 0;
+  for (let denom of denominations) {
+    if (combo[denom]) {
+      const amount = denom * combo[denom];
+      補填合計 += amount;
+      resultText += `${denom}円×${combo[denom]}枚 = ${amount.toLocaleString()}円\n`;
+    }
+  }
+  resultText += `補填合計　${補填合計.toLocaleString()}円`;
+
+  document.getElementById("adjustmentResult").innerText = resultText;
+}
+
+function findOptimalAdjustment(input, baseTargets, maxTry = 10) {
+  let best = null;
+
+  for (let t = 0; t <= maxTry; t++) {
+    const patterns = generateAdjustmentPatterns(baseTargets, t);
+    for (let newTargets of patterns) {
+      const shortage = {};
+      let shortageTotal = 0, shortageCount = 0;
+
+      for (let denom of denominations) {
+        const need = newTargets[denom] || 0;
+        const lack = Math.max(0, need - input[denom]);
+        if (lack > 0) {
+          shortage[denom] = lack;
+          shortageTotal += denom * lack;
+          shortageCount += lack;
+        }
+      }
+
+      const usableCoins = denominations.map(denom => {
+        const adjustedInput = input[denom] + (shortage[denom] || 0);
+        const usable = adjustedInput - (newTargets[denom] || 0);
+        return [denom, usable];
+      }).filter(([_, count]) => count > 0);
+
+      const combo = knapsack(usableCoins, shortageTotal);
+      if (!combo) continue;
+
+      const 補填和 = totalCoins(combo);
+      const total = shortageCount + 補填和;
+
+      if (!best || total < best.total) {
+        best = { newTargets, shortage, shortageCount, shortageTotal, combo, 補填和, total };
+      }
+    }
+  }
+
+  return best;
+}
+
+function generateAdjustmentPatterns(baseTargets, extraCount) {
+  if (extraCount === 0) return [Object.assign({}, baseTargets)];
+  const patterns = [];
+  const denoms = Object.keys(baseTargets).map(Number);
+
+  function backtrack(i, remaining, current) {
+    if (i === denoms.length) {
+      if (remaining === 0) patterns.push({ ...current });
+      return;
+    }
+    const denom = denoms[i];
+    for (let add = 0; add <= remaining; add++) {
+      current[denom] = baseTargets[denom] + add;
+      backtrack(i + 1, remaining - add, current);
+    }
+  }
+
+  backtrack(0, extraCount, {});
+  return patterns;
+}
+
+function knapsack(usableCoins, targetAmount) {
+  const dp = Array(targetAmount + 1).fill(null);
+  dp[0] = {};
+
+  for (let [denom, count] of usableCoins) {
+    for (let a = targetAmount; a >= 0; a--) {
+      if (dp[a] !== null) {
+        for (let k = 1; k <= count; k++) {
+          const newAmount = a + denom * k;
+          if (newAmount > targetAmount) break;
+          const newCombo = { ...dp[a] };
+          newCombo[denom] = (newCombo[denom] || 0) + k;
+
+          if (
+            dp[newAmount] === null ||
+            totalCoins(newCombo) < totalCoins(dp[newAmount])
+          ) {
+            dp[newAmount] = newCombo;
+          }
+        }
+      }
+    }
+  }
+
+  return dp[targetAmount];
+}
+
+function totalCoins(combo) {
+  return Object.values(combo).reduce((sum, c) => sum + c, 0);
+}
