@@ -1,112 +1,40 @@
 const denominations = [10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
-const targetAmount = 155600;
+const goalAmount = 155600;
 
-document.addEventListener("DOMContentLoaded", () => {
-  const stockInputs = document.getElementById("stockInputs");
-  const result = document.getElementById("result");
-  const shortages = document.getElementById("shortages");
-  const compensations = document.getElementById("compensations");
-  const status = document.getElementById("status");
-
-  const inputs = {};
-
+function createInputs() {
+  const form = document.getElementById("cash-form");
   denominations.forEach(denom => {
-    const stockInput = document.createElement("input");
-    stockInput.type = "number";
-    stockInput.min = "0";
-    stockInput.value = "0";
-    stockInput.className = "w-full p-1 border rounded";
-    stockInputs.appendChild(stockInput);
-    inputs[denom] = stockInput;
-
-    const resultDisplay = document.createElement("div");
-    resultDisplay.textContent = `${denom}円: 0枚`;
-    resultDisplay.id = `result-${denom}`;
-    result.appendChild(resultDisplay);
+    const label = document.createElement("label");
+    label.className = "flex items-center gap-2";
+    label.innerHTML = `<span>${denom}円:</span><input type="number" id="input-${denom}" class="border p-1 w-20" min="0" value="0">`;
+    form.appendChild(label);
   });
+}
 
-  document.getElementById("calculateBtn").addEventListener("click", () => {
-    status.textContent = "";
-    shortages.textContent = "";
-    compensations.textContent = "";
+function getInputs() {
+  return denominations.map(denom => parseInt(document.getElementById(`input-${denom}`).value) || 0);
+}
 
-    const stock = {};
-    denominations.forEach(denom => {
-      stock[denom] = parseInt(inputs[denom].value) || 0;
-    });
+function displayResult(text) {
+  document.getElementById("result").textContent = text;
+}
 
-    const result = getInitialUsage(stock);
-    updateResultDisplay(result);
-    const shortageInfo = getShortages(result, stock);
-    displayShortages(shortageInfo);
-  });
+function showLoading(show) {
+  document.getElementById("loading").classList.toggle("hidden", !show);
+}
 
-  document.getElementById("adjustBtn").addEventListener("click", async () => {
-    status.textContent = "調整中です…";
-    shortages.textContent = "";
-    compensations.textContent = "";
+function sendToWorker(type) {
+  const inputs = getInputs();
+  showLoading(true);
+  displayResult("");
+  window.changeWorker.onmessage = (e) => {
+    showLoading(false);
+    displayResult(e.data);
+  };
+  window.changeWorker.postMessage({ type, inputs, goalAmount });
+}
 
-    const stock = {};
-    denominations.forEach(denom => {
-      stock[denom] = parseInt(inputs[denom].value) || 0;
-    });
+document.getElementById("calculate").onclick = () => sendToWorker("calculate");
+document.getElementById("adjust").onclick = () => sendToWorker("adjust");
 
-    const initialUsage = getInitialUsage(stock);
-    const shortageInfo = getShortages(initialUsage, stock);
-
-    const worker = new Worker("worker.js");
-    worker.postMessage({ stock, shortages: shortageInfo, targetAmount });
-
-    worker.onmessage = (e) => {
-      const { result, compensations: comp } = e.data;
-
-      updateResultDisplay(result);
-      displayShortages(getShortages(result, stock));
-      displayCompensations(comp);
-      status.textContent = "";
-      worker.terminate();
-    };
-  });
-
-  function getInitialUsage(stock) {
-    let remaining = targetAmount;
-    const usage = {};
-
-    denominations.forEach(denom => {
-      const maxUse = Math.min(Math.floor(remaining / denom), stock[denom]);
-      usage[denom] = maxUse;
-      remaining -= denom * maxUse;
-    });
-
-    return usage;
-  }
-
-  function getShortages(usage, stock) {
-    const shortages = {};
-    denominations.forEach(denom => {
-      const diff = usage[denom] - stock[denom];
-      if (diff > 0) shortages[denom] = diff;
-    });
-    return shortages;
-  }
-
-  function updateResultDisplay(usage) {
-    denominations.forEach(denom => {
-      document.getElementById(`result-${denom}`).textContent = `${denom}円: ${usage[denom] || 0}枚`;
-    });
-  }
-
-  function displayShortages(shortagesData) {
-    shortages.textContent = "";
-    Object.entries(shortagesData).forEach(([denom, count]) => {
-      shortages.textContent += `不足: ${denom}円 × ${count}枚\n`;
-    });
-  }
-
-  function displayCompensations(compData) {
-    compensations.textContent = "";
-    Object.entries(compData).forEach(([denom, count]) => {
-      compensations.textContent += `補填: ${denom}円 × ${count}枚\n`;
-    });
-  }
-});
+createInputs();
