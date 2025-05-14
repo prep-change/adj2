@@ -3,32 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>釣銭準備ツール</title>
-  <script defer src="main.js"></script>
+  <title>釣銭準備</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
-  <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-2xl p-6 space-y-6">
-    <h1 class="text-2xl font-bold text-center">釣銭準備アプリ</h1>
+<body class="bg-gray-100">
+  <div class="max-w-xl mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4 text-center">釣銭準備</h1>
 
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <h2 class="font-semibold mb-2">在庫入力</h2>
-        <div id="input-area" class="space-y-1"></div>
-      </div>
-      <div>
-        <h2 class="font-semibold mb-2">目標枚数</h2>
-        <div id="target-area" class="space-y-1"></div>
-      </div>
-    </div>
+    <div id="input-area" class="grid grid-cols-2 gap-4 mb-6"></div>
 
-    <div class="flex justify-center gap-4">
-      <button id="calc-btn" class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">不足を計算</button>
-      <button id="adjust-btn" class="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">調整</button>
-    </div>
+    <button onclick="calculateShortage()" class="w-full bg-blue-500 text-white py-2 rounded mb-4">不足を計算する</button>
+    <button onclick="adjustShortage()" class="w-full bg-green-500 text-white py-2 rounded">調整</button>
+    <p id="loading" class="text-center text-gray-600 mt-4 hidden">調整中です...</p>
 
-    <div id="status" class="text-center text-gray-600"></div>
-    <div id="output" class="text-sm whitespace-pre-wrap bg-gray-50 p-4 rounded-xl"></div>
+    <div id="shortageResult" class="mt-6 bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
+    <div id="adjustmentResult" class="mt-6 bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
   </div>
+
+  <script type="module" src="main.js"></script>
 </body>
 </html>
