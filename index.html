@@ -1,56 +1,34 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>釣銭準備アプリ</title>
-  <script src="main.js" defer></script>
-  <style>
-    /* Tailwind CSSを使用するためのスタイル */
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    .flex {
-      display: flex;
-      align-items: center;
-    }
-    .space-x-2 {
-      gap: 8px;
-    }
-    .w-20 {
-      width: 5rem;
-    }
-    .font-medium {
-      font-weight: 500;
-    }
-    .p-1 {
-      padding: 8px;
-    }
-    .border {
-      border: 1px solid #ccc;
-    }
-    .rounded {
-      border-radius: 4px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>釣銭準備ツール</title>
+  <script defer src="main.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1 class="text-2xl font-bold mb-4">釣銭準備アプリ</h1>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-2xl p-6 space-y-6">
+    <h1 class="text-2xl font-bold text-center">釣銭準備アプリ</h1>
 
-  <!-- 入力フォーム -->
-  <div id="input-area" class="mb-4"></div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <h2 class="font-semibold mb-2">在庫入力</h2>
+        <div id="input-area" class="space-y-1"></div>
+      </div>
+      <div>
+        <h2 class="font-semibold mb-2">目標枚数</h2>
+        <div id="target-area" class="space-y-1"></div>
+      </div>
+    </div>
 
-  <button onclick="calculateShortage()" class="p-2 bg-blue-500 text-white rounded">不足を計算する</button>
-  <button onclick="adjustShortage()" class="p-2 bg-green-500 text-white rounded ml-2">調整する</button>
+    <div class="flex justify-center gap-4">
+      <button id="calc-btn" class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">不足を計算</button>
+      <button id="adjust-btn" class="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">調整</button>
+    </div>
 
-  <h2 class="text-xl font-bold mt-4">不足金種</h2>
-  <pre id="shortageResult" class="bg-gray-100 p-2 rounded mt-2"></pre>
-
-  <h2 class="text-xl font-bold mt-4">調整後金種</h2>
-  <pre id="adjustmentResult" class="bg-gray-100 p-2 rounded mt-2"></pre>
-
-  <!-- Worker.jsファイルを動作させるためのscript -->
-  <script src="worker.js" type="application/javascript" defer></script>
+    <div id="status" class="text-center text-gray-600"></div>
+    <div id="output" class="text-sm whitespace-pre-wrap bg-gray-50 p-4 rounded-xl"></div>
+  </div>
 </body>
 </html>
