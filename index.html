@@ -1,106 +1,25 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>釣銭準備</title>
-  <script src="main.js" defer></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f4f4f4;
-    }
-    .container {
-      padding: 20px;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 600px;
-    }
-    input {
-      margin: 8px 0;
-      padding: 8px;
-      font-size: 16px;
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px;
-      font-size: 16px;
-      cursor: pointer;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      margin-top: 10px;
-      width: 100%;
-    }
-    button:disabled {
-      background-color: #ddd;
-      cursor: not-allowed;
-    }
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      white-space: pre-wrap;
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="main.js" defer></script> <!-- main.jsを読み込む -->
 </head>
-<body>
-  <div class="container">
-    <h1>釣銭準備</h1>
-    <label for="goalAmount">目標金額（円）</label>
-    <input type="number" id="goalAmount" placeholder="目標金額を入力" />
-    
-    <label for="denomination1">10000円枚数</label>
-    <input type="number" id="denomination1" placeholder="10000円の枚数" />
-    
-    <label for="denomination2">5000円枚数</label>
-    <input type="number" id="denomination2" placeholder="5000円の枚数" />
-    
-    <label for="denomination3">1000円枚数</label>
-    <input type="number" id="denomination3" placeholder="1000円の枚数" />
-    
-    <label for="denomination4">500円枚数</label>
-    <input type="number" id="denomination4" placeholder="500円の枚数" />
-    
-    <label for="denomination5">100円枚数</label>
-    <input type="number" id="denomination5" placeholder="100円の枚数" />
-    
-    <button id="calculateButton">計算する</button>
-    <div class="result" id="result"></div>
+<body class="bg-gray-100">
+  <div class="max-w-2xl mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4 text-center">釣銭準備</h1>
+
+    <div id="input-area" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6"></div>
+
+    <button onclick="calculateShortage()" class="w-full bg-blue-500 text-white py-2 rounded mb-4">不足を計算する</button>
+    <button onclick="adjustShortage()" class="w-full bg-green-500 text-white py-2 rounded">調整</button>
+
+    <div id="shortageResult" class="mt-6 bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
+    <div id="adjustmentResult" class="mt-6 bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
   </div>
 
-  <script>
-    document.getElementById('calculateButton').addEventListener('click', function() {
-      const goalAmount = parseInt(document.getElementById('goalAmount').value);
-      const denom1 = parseInt(document.getElementById('denomination1').value) || 0;
-      const denom2 = parseInt(document.getElementById('denomination2').value) || 0;
-      const denom3 = parseInt(document.getElementById('denomination3').value) || 0;
-      const denom4 = parseInt(document.getElementById('denomination4').value) || 0;
-      const denom5 = parseInt(document.getElementById('denomination5').value) || 0;
-
-      if (isNaN(goalAmount) || goalAmount <= 0) {
-        alert("目標金額を正しく入力してください。");
-        return;
-      }
-
-      const inputs = [denom1, denom2, denom3, denom4, denom5];
-      const worker = new Worker('worker.js');
-      worker.postMessage({ type: 'calculate', inputs, goalAmount });
-
-      worker.onmessage = function(e) {
-        document.getElementById('result').textContent = e.data;
-      };
-    });
-  </script>
+  <script src="worker.js" type="application/javascript"></script> <!-- worker.jsを読み込む -->
 </body>
 </html>
