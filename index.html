@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>釣銭準備</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="main.js" defer></script> <!-- main.jsを読み込む -->
 </head>
 <body class="bg-gray-100">
   <div class="max-w-2xl mx-auto p-4">
@@ -19,6 +20,7 @@
     <div id="adjustmentResult" class="mt-6 bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
   </div>
 
+  <script src="worker.js" type="application/javascript"></script> <!-- worker.jsを読み込む -->
   <script>
     const denominations = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
     const baseTargets = {
@@ -39,30 +41,30 @@
     denominations.forEach(denom => {
       const wrapper = document.createElement("div");
       wrapper.className = "flex items-center space-x-2 min-w-0";
-      wrapper.innerHTML = 
+      wrapper.innerHTML = `
         <label class="w-20 font-medium">${denom}円</label>
         <input id="input${denom}" type="number" min="0" value="" class="flex-1 p-1 border rounded w-full" />
-      ;
+      `;
       inputArea.appendChild(wrapper);
     });
 
     function calculateShortage() {
       const input = {};
       denominations.forEach(denom => {
-        input[denom] = parseInt(document.getElementById(input${denom}).value || "0", 10);
+        input[denom] = parseInt(document.getElementById(`input${denom}`).value || "0", 10);
       });
       latestInput = input;
 
-      let resultText = 【調整前不足金種】\n;
+      let resultText = `【調整前不足金種】\n`;
       let total = 0;
       for (let denom of denominations) {
         const shortage = Math.max(0, baseTargets[denom] - input[denom]);
         if (shortage > 0) {
-          resultText += ${denom}円×${shortage}枚 = ${denom * shortage}円\n;
+          resultText += `${denom}円×${shortage}枚 = ${denom * shortage}円\n`;
           total += denom * shortage;
         }
       }
-      resultText += 不足合計　${total.toLocaleString()}円;
+      resultText += `不足合計　${total.toLocaleString()}円`;
 
       document.getElementById("shortageResult").innerText = resultText;
       document.getElementById("adjustmentResult").innerText = "";
@@ -85,26 +87,26 @@
         return;
       }
 
-      let resultText = 【調整後不足金種】\n;
+      let resultText = `【調整後不足金種】\n`;
       const { shortage, shortageTotal, combo } = best;
 
       for (let denom of denominations) {
         if (shortage[denom]) {
-          resultText += ${denom}円×${shortage[denom]}枚 = ${denom * shortage[denom]}円\n;
+          resultText += `${denom}円×${shortage[denom]}枚 = ${denom * shortage[denom]}円\n`;
         }
       }
-      resultText += 不足合計　${shortageTotal.toLocaleString()}円\n\n;
+      resultText += `不足合計　${shortageTotal.toLocaleString()}円\n\n`;
 
-      resultText += 【補填内訳】\n;
+      resultText += `【補填内訳】\n`;
       let 補填合計 = 0;
       for (let denom of denominations) {
         if (combo[denom]) {
           const amount = denom * combo[denom];
           補填合計 += amount;
-          resultText += ${denom}円×${combo[denom]}枚 = ${amount.toLocaleString()}円\n;
+          resultText += `${denom}円×${combo[denom]}枚 = ${amount.toLocaleString()}円\n`;
         }
       }
-      resultText += 補填合計　${補填合計.toLocaleString()}円;
+      resultText += `補填合計　${補填合計.toLocaleString()}円`;
 
       document.getElementById("adjustmentResult").innerText = resultText;
     }
